@@ -1,4 +1,7 @@
-# Bias & Fairness Auditor
+<<<<<<< HEAD
+# Fairness-Auditor
+Not just "here are your fairness metrics" — an agent that reasons about which metrics are even valid for your data, flags contradictions between them, and tests mitigation trade-offs empirically.
+
 
 An agentic platform that audits trained classifiers for statistical fairness violations,
 quantifies uncertainty in fairness metrics, tests mitigation strategies, and produces a
