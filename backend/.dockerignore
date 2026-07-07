@@ -1,0 +1,44 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- ML artifacts (mounted/generated at runtime, not baked into image) ---
+*.joblib
+*.pkl
+*.h5
+app/ml/artifacts/
+data/*.csv
+
+# --- Version control / IDE ---
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# --- Tests / docs not needed in image (optional: keep if you want CI inside container) ---
+tests/
+README.md
+
+# --- Docker itself ---
+Dockerfile
+.dockerignore
