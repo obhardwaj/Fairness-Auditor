@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import pandas as pd
-
 from app.core.db import get_db
-from app.models.models import Dataset
+from app.models.models import Dataset, MLModel
+from app.ml.compas_pipeline import run_compas_baseline_pipeline
 from app.schemas.schemas import DatasetOut
 from app.ml.profiling import profile_dataset
 
@@ -41,3 +41,44 @@ def ingest_dataset(name: str, source_path: str, db: Session = Depends(get_db)):
 @router.get("", response_model=list[DatasetOut])
 def list_datasets(db: Session = Depends(get_db)):
     return db.query(Dataset).all()
+
+@router.post("/train-compas-baseline", response_model=DatasetOut)
+def train_compas_baseline(
+    name: str = "compas",
+    csv_path: str = "data/compas-scores-two-years.csv",
+    artifact_dir: str = "data/artifacts",
+    db: Session = Depends(get_db),
+):
+    """
+    Runs the full COMPAS loading/filtering/training pipeline and persists
+    a Dataset row plus one MLModel row per trained baseline classifier.
+
+    This is the bridge between app/ml/compas_pipeline.py (which only prints
+    to console) and Postgres — after this runs, Week 2's metric suite has
+    real stored model rows to audit instead of one-off script output.
+    """
+    result = run_compas_baseline_pipeline(csv_path=csv_path, artifact_dir=artifact_dir)
+
+    dataset = Dataset(
+        name=name,
+        source_path=csv_path,
+        protected_attributes=result["protected_attributes"],
+        row_count=result["row_count_after_filtering"],
+    )
+    db.add(dataset)
+    db.commit()
+    db.refresh(dataset)
+
+    for trained in result["trained_models"]:
+        model_row = MLModel(
+            dataset_id=dataset.id,
+            name=trained.name,
+            algorithm=trained.algorithm,
+            artifact_path=trained.artifact_path,
+            baseline_accuracy=trained.accuracy,
+        )
+        db.add(model_row)
+
+    db.commit()
+    db.refresh(dataset)
+    return dataset

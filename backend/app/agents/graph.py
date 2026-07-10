@@ -30,7 +30,7 @@ def profiler_node(state: AuditState) -> AuditState:
     TODO(week 4): Given state['data_profile'], reason about which fairness
     definitions are appropriate (e.g. demographic parity may be inappropriate
     if base rates genuinely differ for legitimate reasons). Call the
-    Anthropic API via langchain_anthropic.ChatAnthropic here.
+    Groq API via langchain_groq.ChatGroq here.
     """
     return state
 

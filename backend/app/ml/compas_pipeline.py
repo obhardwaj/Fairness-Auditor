@@ -80,13 +80,16 @@ def build_feature_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series, lis
 def run_compas_baseline_pipeline(csv_path: str, artifact_dir: str) -> dict:
     """
     End-to-end: load, filter, build features, train both baseline models.
-    Returns a dict summarizing what was trained, suitable for persisting via
-    the Dataset/MLModel SQLAlchemy rows in app/models/models.py.
+    Returns a dict with everything needed to persist Dataset + MLModel rows.
     """
+    import os
+    os.makedirs(artifact_dir, exist_ok=True)
+
+    original_row_count = len(pd.read_csv(csv_path))
     df = load_and_filter_compas(csv_path)
     X, y, protected_attr_cols, protected_attrs_raw = build_feature_matrix(df)
 
-    results: dict[str, TrainedModel] = {}
+    trained_models = []
     for algorithm, model_name in [
         ("logistic_regression", "compas_logistic_regression_v1"),
         ("gradient_boosting", "compas_gradient_boosting_v1"),
@@ -95,14 +98,14 @@ def run_compas_baseline_pipeline(csv_path: str, artifact_dir: str) -> dict:
             X=X, y=y, algorithm=algorithm,
             artifact_dir=artifact_dir, model_name=model_name,
         )
-        results[algorithm] = trained
+        trained_models.append(trained)
         print(f"{algorithm}: accuracy={trained.accuracy:.4f}  ->  {trained.artifact_path}")
 
     return {
+        "row_count_original": original_row_count,
         "row_count_after_filtering": len(df),
-        "row_count_original": None,  # fill in by comparing to pd.read_csv(csv_path) length if needed
         "protected_attributes": protected_attr_cols,
-        "models": {k: v.accuracy for k, v in results.items()},
+        "trained_models": trained_models,  # list[TrainedModel], used by the API layer to persist rows
     }
 
 
