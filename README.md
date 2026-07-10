@@ -13,8 +13,10 @@ plain-language report — orchestrated with LangGraph, computed with scikit-lear
 fairness-auditor/
 ├── backend/
 │   ├── app/
-│   │   ├── api/          # FastAPI route handlers
-│   │   ├── core/         # config, db session, celery/background job setup
+│   │   ├── api/           # FastAPI route handlers
+│   │   ├── core/          # config, db session, celery/background job setup
+│   │   ├── data/          # data sample
+│   │   ├── test/          # testing model
 │   │   ├── models/        # SQLAlchemy ORM models
 │   │   ├── schemas/       # Pydantic request/response schemas
 │   │   ├── ml/            # metrics, mitigation, data profiling (pure DS code, no LLM)
