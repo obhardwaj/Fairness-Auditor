@@ -26,6 +26,40 @@ def create_audit_run(payload: AuditRunCreate, db: Session = Depends(get_db)):
     return audit_run
 
 
+@router.get("/mitigation-comparison")
+def get_mitigation_comparison(db: Session = Depends(get_db)):
+    """
+    Returns all persisted MitigationResult rows joined with algorithm name,
+    shaped for the frontend's Pareto frontier chart: one point per
+    (algorithm, method) with accuracy (x) and disparate impact ratio (y).
+    """
+    from app.models.models import MitigationResult
+
+    rows = (
+        db.query(MitigationResult, MLModel.algorithm)
+        .join(AuditRun, MitigationResult.audit_run_id == AuditRun.id)
+        .join(MLModel, AuditRun.model_id == MLModel.id)
+        .all()
+    )
+
+    results = []
+    for mitigation_result, algorithm in rows:
+        di = mitigation_result.fairness_metrics.get("disparate_impact_ratio", {})
+        dp = mitigation_result.fairness_metrics.get("demographic_parity_difference", {})
+        eo = mitigation_result.fairness_metrics.get("equalized_odds_difference", {})
+
+        results.append({
+            "algorithm": algorithm,
+            "method": mitigation_result.method,
+            "stage_type": mitigation_result.stage_type,
+            "accuracy": mitigation_result.accuracy,
+            "disparate_impact_ratio": di.get("value"),
+            "demographic_parity_difference": dp.get("value"),
+            "equalized_odds_difference": eo.get("value"),
+        })
+
+    return results
+
 @router.get("/{audit_run_id}", response_model=AuditRunOut)
 def get_audit_run(audit_run_id: str, db: Session = Depends(get_db)):
     audit_run = db.query(AuditRun).filter(AuditRun.id == audit_run_id).first()
