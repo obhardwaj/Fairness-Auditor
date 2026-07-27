@@ -76,6 +76,16 @@ def build_feature_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series, lis
 
     return features, y, ["race", "sex"], protected_attrs_raw
 
+def filter_to_binary_race(df: pd.DataFrame, group_a: str = "African-American", group_b: str = "Caucasian") -> pd.DataFrame:
+    """
+    Restricts the dataframe to two race categories so binary-only mitigation
+    methods (e.g. AIF360's Reweighing) can run. Defaults to the two groups
+    ProPublica's own headline analysis focused on, and the two largest
+    categories in this dataset (3,696 and 2,454 rows respectively).
+    """
+    filtered = df[df["race"].isin([group_a, group_b])].copy()
+    return filtered.reset_index(drop=True)
+
 
 def run_compas_baseline_pipeline(csv_path: str, artifact_dir: str) -> dict:
     """
