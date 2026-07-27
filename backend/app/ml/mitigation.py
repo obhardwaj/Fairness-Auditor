@@ -15,10 +15,13 @@ from __future__ import annotations
 import numpy as np
 from aif360.datasets import BinaryLabelDataset
 from aif360.algorithms.preprocessing import Reweighing
+from pandas.core.common import random_state
 
 from app.ml.baseline_models import MODEL_REGISTRY
 from app.ml.compas_pipeline import load_and_filter_compas, filter_to_binary_race, build_feature_matrix
-
+from fairlearn.reductions import ExponentiatedGradient, DemographicParity
+from fairlearn.postprocessing import ThresholdOptimizer
+from sklearn.model_selection import train_test_split
 
 
 def apply_reweighing(X, y, protected_attr_col_name: str, protected_attr_values, artifact_dir: str):
@@ -111,3 +114,93 @@ def run_reweighing_on_race(csv_path: str, artifact_dir: str):
         artifact_dir=artifact_dir,
     )
     return results
+
+def apply_exponentiated_gradient(X, y, protected_attr_values, artifact_dir: str, constraint_fn=None):
+    if constraint_fn is None:
+        constraint_fn = lambda: DemographicParity()
+
+    X_train, X_test, y_train, y_test, prot_train, prot_test = train_test_split(
+        X, y, protected_attr_values, test_size=0.2, random_state=42, stratify=y
+    )
+
+    results = {}
+    for algorithm, model_fn in MODEL_REGISTRY.items():
+        base_estimator = model_fn()
+        constraint = constraint_fn()
+
+        mitigator = ExponentiatedGradient(estimator=base_estimator, constraints=constraint)
+        mitigator.fit(X_train, y_train, sensitive_features=prot_train)
+
+        # Use the deterministic weighted-average PMF instead of the stochastic
+        # .predict() — ExponentiatedGradient's .predict() samples randomly from
+        # its classifier mixture each call, which made results non-reproducible
+        # across runs. _pmf_predict gives the same expected-value output every
+        # time for a given fitted mitigator.
+        pmf = mitigator._pmf_predict(X_test)
+        y_prob = pmf[:, 1]
+        preds = (y_prob >= 0.5).astype(int)
+
+        acc = float((preds == y_test.to_numpy()).mean())
+
+        artifact_path = f"{artifact_dir}/expgrad_{algorithm}.joblib"
+        import joblib
+        joblib.dump(mitigator, artifact_path)
+
+        results[algorithm] = {
+            "model": mitigator,
+            "accuracy": acc,
+            "artifact_path": artifact_path,
+            "X_test": X_test,
+            "y_test": y_test,
+            "test_protected_attr": prot_test,
+        }
+
+    return results
+
+
+def apply_threshold_optimizer(X, y, protected_attr_values, artifact_dir: str, constraint: str = "demographic_parity"):
+    """
+    Post-processing mitigation: ThresholdOptimizer takes an ALREADY-TRAINED
+    model and adjusts decision thresholds per group to satisfy a fairness
+    constraint — it doesn't retrain anything, just recalibrates cutoffs.
+
+    Trains a fresh baseline model per algorithm first (since ThresholdOptimizer
+    needs a fitted estimator to wrap), then wraps it.
+    """
+    X_train, X_test, y_train, y_test, prot_train, prot_test = train_test_split(
+        X, y, protected_attr_values, test_size=0.2, random_state=42, stratify=y
+    )
+
+    results = {}
+    for algorithm, model_fn in MODEL_REGISTRY.items():
+        base_estimator = model_fn()
+        base_estimator.fit(X_train, y_train)
+
+        postprocessor = ThresholdOptimizer(
+            estimator=base_estimator,
+            constraints=constraint,
+            predict_method="predict_proba",
+            prefit=True,
+        )
+        postprocessor.fit(X_train, y_train, sensitive_features=prot_train)
+
+        import numpy as np
+        np.random.seed(42)
+        preds = postprocessor.predict(X_test, sensitive_features=prot_test)
+        acc = float((preds == y_test.to_numpy()).mean())
+
+        artifact_path = f"{artifact_dir}/thresholdopt_{algorithm}.joblib"
+        import joblib
+        joblib.dump(postprocessor, artifact_path)
+
+        results[algorithm] = {
+            "model": postprocessor,
+            "accuracy": acc,
+            "artifact_path": artifact_path,
+            "X_test": X_test,
+            "y_test": y_test,
+            "test_protected_attr": prot_test,
+        }
+
+    return results
+
