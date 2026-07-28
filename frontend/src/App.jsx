@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import ParetoChart from './components/ParetoChart'
 import AuditReport from './components/AuditReport'
-
+import AuditRunSelector from './components/AuditRunSelector'
 
 const API_BASE = 'http://localhost:8000'
 
 function App() {
   const [apiStatus, setApiStatus] = useState('checking...')
+  const [selectedAuditRunId, setSelectedAuditRunId] = useState(null)
 
   useEffect(() => {
     axios
@@ -32,8 +33,10 @@ function App() {
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <ParetoChart />
         </div>
+
         <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <AuditReport auditRunId="60280f3f-6cae-408f-a7b1-04d7129c4f6b" />
+          <AuditRunSelector selectedId={selectedAuditRunId} onSelect={setSelectedAuditRunId} />
+          <AuditReport auditRunId={selectedAuditRunId} />
         </div>
       </div>
     </div>

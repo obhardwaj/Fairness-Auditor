@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.db import get_db
-from app.models.models import AuditRun, AuditStatus
+from app.models.models import AuditRun, AuditStatus, MLModel, Dataset, MetricResult
 from app.schemas.schemas import AuditRunCreate, AuditRunOut
 from app.core.tasks import run_audit_task
 import joblib
@@ -59,6 +59,29 @@ def get_mitigation_comparison(db: Session = Depends(get_db)):
         })
 
     return results
+
+@router.get("")
+def list_audit_runs(db: Session = Depends(get_db)):
+    """
+    Lists all audit runs with their associated model's algorithm name, so the
+    frontend can offer a human-readable picker instead of requiring a raw UUID.
+    """
+    rows = (
+        db.query(AuditRun, MLModel.algorithm, MLModel.name)
+        .join(MLModel, AuditRun.model_id == MLModel.id)
+        .order_by(AuditRun.created_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": audit_run.id,
+            "algorithm": algorithm,
+            "model_name": model_name,
+            "status": audit_run.status,
+            "created_at": audit_run.created_at,
+        }
+        for audit_run, algorithm, model_name in rows
+    ]
 
 @router.get("/{audit_run_id}", response_model=AuditRunOut)
 def get_audit_run(audit_run_id: str, db: Session = Depends(get_db)):
