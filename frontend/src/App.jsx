@@ -3,6 +3,7 @@ import axios from 'axios'
 import ParetoChart from './components/ParetoChart'
 import AuditReport from './components/AuditReport'
 import AuditRunSelector from './components/AuditRunSelector'
+import CalibrationChart from './components/CalibrationChart'
 
 const API_BASE = 'http://localhost:8000'
 
@@ -38,9 +39,13 @@ function App() {
           <AuditRunSelector selectedId={selectedAuditRunId} onSelect={setSelectedAuditRunId} />
           <AuditReport auditRunId={selectedAuditRunId} />
         </div>
+
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <CalibrationChart auditRunId={selectedAuditRunId} />
+        </div>
       </div>
     </div>
   )
 }
 
-export default App
+export default App  

@@ -83,6 +83,40 @@ def list_audit_runs(db: Session = Depends(get_db)):
         for audit_run, algorithm, model_name in rows
     ]
 
+
+@router.get("/{audit_run_id}/calibration")
+def get_audit_calibration(audit_run_id: str, db: Session = Depends(get_db)):
+    """
+    Computes per-group calibration curves on demand for this audit run's
+    model. Not persisted anywhere -- calibration_within_groups has always
+    been curve data (a list of points per group), not a scalar, so it's
+    recomputed fresh here rather than stored in MetricResult/MitigationResult.
+    """
+    from app.ml.compas_pipeline import filter_to_binary_race
+    from app.ml.metrics import calibration_within_groups
+    import joblib
+
+    audit_run = db.query(AuditRun).filter(AuditRun.id == audit_run_id).first()
+    if not audit_run:
+        raise HTTPException(status_code=404, detail="Audit run not found")
+
+    model_row = db.query(MLModel).filter(MLModel.id == audit_run.model_id).first()
+    dataset_row = db.query(Dataset).filter(Dataset.id == model_row.dataset_id).first()
+
+    df = load_and_filter_compas(dataset_row.source_path)
+    df = filter_to_binary_race(df)
+    X, y, protected_attr_cols, protected_attrs_raw = build_feature_matrix(df)
+
+    clf = joblib.load(model_row.artifact_path)
+    y_prob = clf.predict_proba(X)[:, 1]
+    race_values = protected_attrs_raw["race"].to_numpy()
+
+    curves = calibration_within_groups(
+        y_true=y.to_numpy(), y_prob=y_prob, protected_attr=race_values, n_bins=10,
+    )
+    return curves
+
+
 @router.get("/{audit_run_id}", response_model=AuditRunOut)
 def get_audit_run(audit_run_id: str, db: Session = Depends(get_db)):
     audit_run = db.query(AuditRun).filter(AuditRun.id == audit_run_id).first()

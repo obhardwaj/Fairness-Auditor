@@ -60,7 +60,7 @@ fairness-auditor/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── audits.py          # audit run creation, status, report, mitigation-comparison
+│   │   │   ├── audits.py          # audit run CRUD, list, report, calibration, mitigation-comparison
 │   │   │   └── datasets.py        # dataset ingestion, COMPAS baseline training endpoint
 │   │   ├── core/
 │   │   │   ├── config.py          # Pydantic settings (DB, Redis, Groq API key)
@@ -73,7 +73,7 @@ fairness-auditor/
 │   │   │   ├── profiling.py       # protected attribute + proxy detection
 │   │   │   ├── compas_pipeline.py # load/filter COMPAS, feature matrix, baseline training
 │   │   │   ├── baseline_models.py # logistic regression / gradient boosting training
-│   │   │   ├── metrics.py         # fairness metric suite + bootstrap CIs
+│   │   │   ├── metrics.py         # fairness metric suite, bootstrap CIs, calibration curves
 │   │   │   └── mitigation.py      # reweighing, ExponentiatedGradient, ThresholdOptimizer
 │   │   ├── agents/
 │   │   │   ├── llm.py             # shared Groq client
@@ -93,8 +93,10 @@ fairness-auditor/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ParetoChart.jsx    # accuracy vs. disparate impact scatter, all 8 method/algorithm points
-│   │   │   └── AuditReport.jsx    # renders report text, profiler notes, critic contradictions, chosen mitigation
+│   │   │   ├── ParetoChart.jsx        # accuracy vs. disparate impact scatter, all 8 method/algorithm points
+│   │   │   ├── AuditReport.jsx        # report text, profiler notes, critic contradictions, chosen mitigation — polls until completed
+│   │   │   ├── AuditRunSelector.jsx   # dropdown of all audit runs, polls for status updates
+│   │   │   └── CalibrationChart.jsx   # per-group calibration curves, computed on demand
 │   │   └── App.jsx
 │   └── Dockerfile
 ├── docker/
@@ -103,6 +105,7 @@ fairness-auditor/
 ├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
+├── LICENSE
 └── backend/.dockerignore, frontend/.dockerignore
 ```
 

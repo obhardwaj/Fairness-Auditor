@@ -1,24 +1,52 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
 
 const API_BASE = 'http://localhost:8000'
+const POLL_INTERVAL_MS = 3000
 
 export default function AuditReport({ auditRunId }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
+  const intervalRef = useRef(null)
 
   useEffect(() => {
     if (!auditRunId) return
-    axios
-      .get(`${API_BASE}/audit/${auditRunId}/report`)
-      .then((res) => setData(res.data))
-      .catch(() => setError('Could not load audit report.'))
+
+    setData(null)
+    setError(null)
+
+    const fetchReport = () => {
+      axios
+        .get(`${API_BASE}/audit/${auditRunId}/report`)
+        .then((res) => {
+          setData(res.data)
+          // Stop polling once the run reaches a terminal state.
+          if (res.data.status === 'completed' || res.data.status === 'failed') {
+            clearInterval(intervalRef.current)
+          }
+        })
+        .catch(() => {
+          setError('Could not load audit report.')
+          clearInterval(intervalRef.current)
+        })
+    }
+
+    fetchReport() // immediate first fetch, don't wait for the first interval tick
+    intervalRef.current = setInterval(fetchReport, POLL_INTERVAL_MS)
+
+    return () => clearInterval(intervalRef.current) // cleanup on unmount or auditRunId change
   }, [auditRunId])
 
   if (error) return <div className="text-sm text-red-500">{error}</div>
   if (!data) return <div className="text-sm text-gray-400">Loading audit report…</div>
+
   if (data.status !== 'completed') {
-    return <div className="text-sm text-gray-400">Audit status: {data.status}</div>
+    return (
+      <div className="flex items-center gap-2 text-sm text-gray-500">
+        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-gray-500" />
+        Audit in progress — status: <span className="font-mono">{data.status}</span>
+      </div>
+    )
   }
 
   const trace = data.agent_trace || {}

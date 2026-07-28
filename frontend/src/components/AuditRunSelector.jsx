@@ -1,23 +1,48 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
 
 const API_BASE = 'http://localhost:8000'
+const POLL_INTERVAL_MS = 5000
 
 export default function AuditRunSelector({ selectedId, onSelect }) {
   const [runs, setRuns] = useState(null)
   const [error, setError] = useState(null)
+  const intervalRef = useRef(null)
+  const hasSetDefaultRef = useRef(false)
 
   useEffect(() => {
-    axios
-      .get(`${API_BASE}/audit`)
-      .then((res) => {
-        setRuns(res.data)
-        // Default to the most recent run if nothing's selected yet
-        if (!selectedId && res.data.length > 0) {
-          onSelect(res.data[0].id)
-        }
-      })
-      .catch(() => setError('Could not load audit runs.'))
+    const fetchRuns = () => {
+      axios
+        .get(`${API_BASE}/audit`)
+        .then((res) => {
+          setRuns(res.data)
+
+          // Only auto-select a default once, on first successful load —
+          // don't override the user's manual selection on later poll ticks.
+          if (!hasSetDefaultRef.current && !selectedId && res.data.length > 0) {
+            onSelect(res.data[0].id)
+            hasSetDefaultRef.current = true
+          }
+
+          // Stop polling once every run has reached a terminal state —
+          // nothing left that could still change.
+          const anyInProgress = res.data.some(
+            (r) => r.status !== 'completed' && r.status !== 'failed'
+          )
+          if (!anyInProgress) {
+            clearInterval(intervalRef.current)
+          }
+        })
+        .catch(() => {
+          setError('Could not load audit runs.')
+          clearInterval(intervalRef.current)
+        })
+    }
+
+    fetchRuns()
+    intervalRef.current = setInterval(fetchRuns, POLL_INTERVAL_MS)
+
+    return () => clearInterval(intervalRef.current)
   }, [])
 
   if (error) return <div className="text-sm text-red-500">{error}</div>
