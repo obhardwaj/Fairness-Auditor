@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 import ParetoChart from './components/ParetoChart'
+import AuditReport from './components/AuditReport'
+
 
 const API_BASE = 'http://localhost:8000'
 
@@ -29,6 +31,9 @@ function App() {
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <ParetoChart />
+        </div>
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <AuditReport auditRunId="60280f3f-6cae-408f-a7b1-04d7129c4f6b" />
         </div>
       </div>
     </div>

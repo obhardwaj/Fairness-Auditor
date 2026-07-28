@@ -74,8 +74,12 @@ def get_audit_report(audit_run_id: str, db: Session = Depends(get_db)):
     if not audit_run:
         raise HTTPException(status_code=404, detail="Audit run not found")
     if audit_run.status != AuditStatus.completed:
-        return {"status": audit_run.status, "report": None}
-    return {"status": audit_run.status, "report": audit_run.report_text}
+        return {"status": audit_run.status, "report": None, "agent_trace": None}
+    return {
+        "status": audit_run.status,
+        "report": audit_run.report_text,
+        "agent_trace": audit_run.agent_trace,
+    }
 
 
 @router.post("/{audit_run_id}/run-metrics")
