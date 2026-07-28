@@ -4,6 +4,7 @@ import ParetoChart from './components/ParetoChart'
 import AuditReport from './components/AuditReport'
 import AuditRunSelector from './components/AuditRunSelector'
 import CalibrationChart from './components/CalibrationChart'
+import RunAuditButton from './components/RunAuditButton'
 
 const API_BASE = 'http://localhost:8000'
 
@@ -42,6 +43,9 @@ function App() {
 
         <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <CalibrationChart auditRunId={selectedAuditRunId} />
+        </div>
+        <div className="mb-4">
+          <RunAuditButton onAuditCreated={setSelectedAuditRunId} />
         </div>
       </div>
     </div>

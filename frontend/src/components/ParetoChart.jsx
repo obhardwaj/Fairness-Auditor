@@ -4,6 +4,7 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip,
   ReferenceLine, ResponsiveContainer, Legend,
 } from 'recharts'
+import { LoadingSkeleton, ErrorBox } from './StatusBox'
 
 const API_BASE = 'http://localhost:8000'
 
@@ -51,12 +52,8 @@ export default function ParetoChart() {
       .catch(() => setError('Could not load mitigation results.'))
   }, [])
 
-  if (error) {
-    return <div className="text-sm text-red-500">{error}</div>
-  }
-  if (!data) {
-    return <div className="text-sm text-gray-400">Loading fairness/accuracy tradeoff…</div>
-  }
+  if (error) return <ErrorBox message={error} />
+  if (!data) return <LoadingSkeleton lines={4} />
 
   // Separate series per method so each renders with a distinct color + legend entry.
   const methods = [...new Set(data.map((d) => d.method))]

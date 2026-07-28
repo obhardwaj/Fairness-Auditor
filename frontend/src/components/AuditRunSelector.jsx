@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
+import { LoadingSkeleton, ErrorBox } from './StatusBox'
 
 const API_BASE = 'http://localhost:8000'
 const POLL_INTERVAL_MS = 5000
@@ -45,8 +46,8 @@ export default function AuditRunSelector({ selectedId, onSelect }) {
     return () => clearInterval(intervalRef.current)
   }, [])
 
-  if (error) return <div className="text-sm text-red-500">{error}</div>
-  if (!runs) return <div className="text-sm text-gray-400">Loading audit runs…</div>
+  if (error) return <ErrorBox message={error} />
+  if (!runs) return <LoadingSkeleton lines={1} />
   if (runs.length === 0) return <div className="text-sm text-gray-400">No audit runs yet.</div>
 
   return (

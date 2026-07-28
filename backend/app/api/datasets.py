@@ -82,3 +82,13 @@ def train_compas_baseline(
     db.commit()
     db.refresh(dataset)
     return dataset
+
+@router.get("/models")
+def list_models(db: Session = Depends(get_db)):
+    """Lists all trained models, for populating the 'Run New Audit' picker."""
+    from app.models.models import MLModel
+    models = db.query(MLModel).order_by(MLModel.created_at.desc()).all()
+    return [
+        {"id": m.id, "name": m.name, "algorithm": m.algorithm, "baseline_accuracy": m.baseline_accuracy}
+        for m in models
+    ]

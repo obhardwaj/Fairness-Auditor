@@ -4,6 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts'
+import { LoadingSkeleton, ErrorBox } from './StatusBox'
 
 const API_BASE = 'http://localhost:8000'
 
@@ -25,8 +26,8 @@ export default function CalibrationChart({ auditRunId }) {
       .catch(() => setError('Could not load calibration data.'))
   }, [auditRunId])
 
-  if (error) return <div className="text-sm text-red-500">{error}</div>
-  if (!curves) return <div className="text-sm text-gray-400">Loading calibration curves…</div>
+  if (error) return <ErrorBox message={error} />
+  if (!curves) return <LoadingSkeleton lines={4} />
 
   const groups = Object.keys(curves)
   if (groups.length === 0) {

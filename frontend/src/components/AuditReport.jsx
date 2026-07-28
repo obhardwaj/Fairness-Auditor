@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
+import { LoadingSkeleton, ErrorBox } from './StatusBox'
 
 const API_BASE = 'http://localhost:8000'
 const POLL_INTERVAL_MS = 3000
@@ -37,8 +38,8 @@ export default function AuditReport({ auditRunId }) {
     return () => clearInterval(intervalRef.current) // cleanup on unmount or auditRunId change
   }, [auditRunId])
 
-  if (error) return <div className="text-sm text-red-500">{error}</div>
-  if (!data) return <div className="text-sm text-gray-400">Loading audit report…</div>
+  if (error) return <ErrorBox message={error} />
+  if (!data) return <LoadingSkeleton lines={5} />
 
   if (data.status !== 'completed') {
     return (

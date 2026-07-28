@@ -61,7 +61,7 @@ fairness-auditor/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── audits.py          # audit run CRUD, list, report, calibration, mitigation-comparison
-│   │   │   └── datasets.py        # dataset ingestion, COMPAS baseline training endpoint
+│   │   │   └── datasets.py        # dataset ingestion, COMPAS baseline training, model listing
 │   │   ├── core/
 │   │   │   ├── config.py          # Pydantic settings (DB, Redis, Groq API key)
 │   │   │   ├── db.py              # SQLAlchemy engine/session
@@ -97,6 +97,8 @@ fairness-auditor/
 │   │   │   ├── AuditReport.jsx        # report text, profiler notes, critic contradictions, chosen mitigation — polls until completed
 │   │   │   ├── AuditRunSelector.jsx   # dropdown of all audit runs, polls for status updates
 │   │   │   └── CalibrationChart.jsx   # per-group calibration curves, computed on demand
+│   │   │   ├── RunAuditButton.jsx     # triggers a new audit run from the UI, no terminal needed
+│   │   │   └── StatusBox.jsx          # shared loading skeleton / error box components
 │   │   └── App.jsx
 │   └── Dockerfile
 ├── docker/
@@ -135,6 +137,11 @@ or mitigations are appropriate and *why* — they never compute fairness math
 themselves. Every number in a report traces back to Fairlearn, AIF360, or
 scipy/numpy, not to model-generated arithmetic.
 
+The dashboard is fully self-service: new audit runs can be triggered, tracked,
+and reviewed entirely from the UI (`http://localhost:5173`) — no terminal or
+API client required after initial setup.
+
+
 - **`profiler`** — computes ground-truth base rate gaps between groups, then
   reasons about whether demographic parity or equalized odds is the more
   appropriate target given that gap.
@@ -152,6 +159,7 @@ scipy/numpy, not to model-generated arithmetic.
   recomputes the full metric suite on the mitigated model.
 - **`report`** — synthesizes the full run into a plain-language report for a
   non-technical stakeholder.
+
 
 ## Tech Stack
 
@@ -278,11 +286,14 @@ docker compose exec api alembic upgrade head
 # ingest + train baseline models
 curl -X POST "http://localhost:8000/datasets/train-compas-baseline"
 
-# run the full agentic audit (async via Celery)
+# run the full agentic audit (async via Celery) -- either via curl:
 curl -X POST http://localhost:8000/audit \
   -H "Content-Type: application/json" \
   -d '{"model_id": "<uuid from the models table>"}'
-```
+
+# ...or from the dashboard itself (http://localhost:5173): pick a model
+# from the "Run New Audit" dropdown and click Run -- the audit run selector,
+# report, and calibration chart all poll automatically until it completes.
 
 ## Project Structure
 
